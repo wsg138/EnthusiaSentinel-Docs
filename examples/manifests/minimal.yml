@@ -1,0 +1,14 @@
+schema_version: 1
+plugin:
+  id: sentinel-example
+  name: SentinelExample
+  main_class: com.example.sentinel.SentinelExample
+artifact:
+  name: sentinel-example
+  jar_path: build/libs/SentinelExample.jar
+profiles:
+  - startup
+configs: []
+databases: []
+dependencies: []
+actions: []
