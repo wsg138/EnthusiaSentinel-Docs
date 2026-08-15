@@ -34,7 +34,7 @@ No alternate spelling, extra prose, multiline form, prefix, suffix, or unapprove
 
 Typical states:
 
-- `queued`: admitted but waiting for shared heavy-validation capacity or a trusted host resource gate;
+- `queued`: accepted into the Sentinel queue but waiting for shared heavy-validation capacity or trusted host resource admission;
 - `running`: actively executing;
 - `passed`: the profile reached its required terminal success;
 - `failed`: a validation/runtime/security condition failed;
