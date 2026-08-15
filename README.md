@@ -1,47 +1,127 @@
-# Enthusia Sentinel
+# Enthusia Sentinel Documentation
 
-Sentinel is a shared, GitHub-driven staging service for testing Minecraft plugins against controlled disposable Paper environments. This repository is the public human-facing documentation bundle; it contains no control-plane credentials or trusted production policy.
+**Enthusia Sentinel is the shared staging and runtime-testing system used to test Minecraft plugins before they are merged or released.**
 
-## I want to…
+It connects to approved GitHub repositories, takes the plugin build for the **exact commit being reviewed**, starts it in a disposable Paper server on trusted staging hardware, runs the approved test profile, and reports the result back to GitHub.
 
-- **Test my plugin:** start with [Getting started](docs/getting-started.md), then [Using Sentinel](docs/using-sentinel.md).
-- **Add a repository:** follow [Project onboarding](docs/project-onboarding.md).
-- **Run a test:** use the exact commands in [Using Sentinel](docs/using-sentinel.md) and choose from [Profiles](docs/profiles.md).
-- **Understand a failure:** use [Troubleshooting](docs/troubleshooting.md), then escalate only when needed.
-- **Remove my repository:** follow [Disconnecting](docs/disconnecting.md).
-- **Understand ownership:** read [User and repository ownership](docs/user-and-repository-ownership.md).
-- **Understand artifacts or dependencies:** read [Artifacts](docs/artifacts.md) and [Dependencies](docs/dependencies.md).
-- **Understand the trust boundary:** read [Security model](docs/security-model.md).
-- **I am a Sentinel operator:** use [Operator escalation](docs/operator-escalation.md); private implementation runbooks remain in the trusted control repository.
+This repository is the public documentation for using Sentinel. It does **not** contain the private Sentinel control plane, credentials, Pi access, production policy, or server secrets.
 
-## What Sentinel is
+## Who this is for
 
-Sentinel accepts only repositories that have been deliberately onboarded by the Sentinel owner. For an authorized repository it binds work to an immutable repository identity, exact commit SHA, approved profile, validated `.enthusia-test.yml`, and a successful GitHub Actions artifact for that same SHA. Test execution is disposable and results are returned to GitHub.
+Use these docs if you:
 
-## What Sentinel is not
+- maintain a Minecraft plugin that should be tested through Enthusia Sentinel;
+- need to connect a new GitHub repository;
+- want to run or understand Sentinel tests on a pull request;
+- manage a repository that is already connected;
+- need to disconnect your repository from Sentinel.
 
-Sentinel is not a general CI runner, shell service, remote server account, production Minecraft server, arbitrary artifact downloader, or permission shortcut. Installing the GitHub App does **not** authorize a repository for execution. A repository still needs reviewed Sentinel onboarding and a profile allowlist.
+You do **not** need SSH access to the staging Pi or access to the private Sentinel repository to use Sentinel normally.
 
-## Security and control
+## What Sentinel does
 
-The existing **Enthusia Sentinel** GitHub App may be installed independently on multiple GitHub accounts or organizations. Each onboarded repository maps to exactly one trusted installation. Short-lived installation tokens are narrowed to the repositories Sentinel is actively serving for that installation. Repository managers can use only their own repository scope; they cannot manage another tenant or the private control plane.
+For an approved repository, Sentinel can:
 
-Privilege increases—new repository enrollment, more profiles, manager changes, dependency trust, or re-enrollment after disconnect—require Sentinel-owner review. A legitimate repository manager can reduce access by disconnecting their repository without control-plane access and can separately change or remove the GitHub App installation/repository selection in GitHub.
+1. identify the exact GitHub repository and commit SHA under test;
+2. verify the repository's `.enthusia-test.yml` configuration;
+3. find the successful GitHub Actions artifact built for that exact SHA;
+4. verify the artifact and plugin identity before execution;
+5. start a clean disposable Paper environment;
+6. run the repository's approved test profile;
+7. clean up the test environment; and
+8. report the result back to the pull request/checks.
 
-## Copy-paste AI prompts
+Depending on the repository, approved profiles can test things such as basic startup, restart behavior, configuration, databases, dependencies, Java clients, Bedrock clients, and broader integration behavior. See [Profiles](docs/profiles.md) for the supported profile types.
 
-### Prepare a plugin repository
+## What Sentinel does not do
 
-> Prepare this Minecraft plugin repository for Enthusia Sentinel. Inspect the real build, plugin metadata, Java/Paper versions, deployable JAR, dependencies, config/database/restart behavior, and existing CI. Add a safe `.enthusia-test.yml`, publish a dedicated exact-SHA Actions artifact from the existing build, and document only the Sentinel profiles the plugin actually needs. Do not add credentials, arbitrary URLs, shell execution, host paths, resource controls, or mutable/latest artifact selection.
+Sentinel is **not**:
 
-### Onboard a repository
+- a production Minecraft server;
+- a general-purpose shell or remote-access service;
+- a replacement for normal build/test CI;
+- permission to run arbitrary code on the staging host;
+- automatically enabled just because the GitHub App is installed.
 
-> Help me onboard this repository to Enthusia Sentinel. Verify its immutable GitHub repository identity and owner, confirm the existing Enthusia Sentinel GitHub App is installed on the owning account/organization with this repository visible, review the repository-side Sentinel manifest/artifact setup, choose the minimum automatic/manual profile set, and prepare the information the Sentinel owner needs for reviewed control-plane authorization. Do not create a new GitHub App or PAT.
+Every repository must be deliberately onboarded and given an explicit profile allowlist by the Sentinel owner.
 
-### Troubleshoot a failed run
+## New project? Start here
 
-> Troubleshoot this Enthusia Sentinel result using the PR comment/check, exact SHA, profile, queue state, artifact workflow, `.enthusia-test.yml`, and bounded result code. Distinguish queue/resource deferral from test failure. Do not suggest bypassing exact-SHA, provenance, manager authorization, App installation scope, dependency locks, or isolation controls.
+If you want to connect another plugin repository, follow this order:
 
-### Disconnect a repository
+1. Read [Getting started](docs/getting-started.md).
+2. Prepare your build artifact and `.enthusia-test.yml`.
+3. Install the existing **Enthusia Sentinel** GitHub App on the account or organization that owns the repository and make the intended repository visible to it.
+4. Follow [Project onboarding](docs/project-onboarding.md) so the Sentinel owner can review and authorize the repository.
+5. After onboarding, run the first test from an open, non-draft pull request using one of the exact commands in [Using Sentinel](docs/using-sentinel.md).
 
-> Help me safely disconnect this repository from Enthusia Sentinel. Confirm I am a legitimate manager, cancel only eligible jobs belonging to this repository, issue the exact repository disconnect command on an open same-repository non-draft PR, verify Sentinel reports the repository disconnected, then show how to reduce or revoke the existing Enthusia Sentinel GitHub App access from my GitHub account/organization. Do not request control-repository access or delete another repository’s jobs.
+Installing the App alone does **not** give Sentinel execution permission. The repository must also be added to Sentinel's trusted configuration.
+
+## Already connected? Common tasks
+
+- **Run or check a test:** [Using Sentinel](docs/using-sentinel.md)
+- **Choose or understand a profile:** [Profiles](docs/profiles.md)
+- **Understand a failure:** [Troubleshooting](docs/troubleshooting.md)
+- **Understand build artifacts:** [Artifacts](docs/artifacts.md)
+- **Use trusted plugin dependencies:** [Dependencies](docs/dependencies.md)
+- **Understand who can manage a repository:** [User and repository ownership](docs/user-and-repository-ownership.md)
+- **Disconnect your repository:** [Disconnecting](docs/disconnecting.md)
+
+## How repository access works
+
+Sentinel uses the existing **Enthusia Sentinel GitHub App**. The same App can be installed on more than one GitHub account or organization.
+
+A connected repository is tied to:
+
+- its immutable GitHub repository identity;
+- one specific GitHub App installation;
+- its approved Sentinel profiles; and
+- any explicitly assigned repository managers.
+
+Repository managers only receive authority for repositories assigned to them. Managing one repository does not grant access to another repository or to the private Sentinel control plane.
+
+New repositories, additional profiles, manager changes, trusted dependencies, and reconnecting a previously disconnected repository require Sentinel-owner review.
+
+## Removing your repository
+
+Repository owners are not locked into Sentinel.
+
+If you are an authorized manager for the repository, you can reduce Sentinel access with:
+
+```text
+@enthusia-sentinel disconnect repository
+```
+
+See [Disconnecting](docs/disconnecting.md) for the required pull-request context and what the command does.
+
+The GitHub account or organization owner can also independently remove that repository from the Sentinel App installation or uninstall the App entirely.
+
+## Documentation
+
+### Setup and everyday use
+
+- [Getting started](docs/getting-started.md)
+- [Project onboarding](docs/project-onboarding.md)
+- [Using Sentinel](docs/using-sentinel.md)
+- [Profiles](docs/profiles.md)
+- [Troubleshooting](docs/troubleshooting.md)
+
+### Repository configuration
+
+- [Artifacts](docs/artifacts.md)
+- [Dependencies](docs/dependencies.md)
+- [Maven example](examples/maven/pom.xml)
+- [Gradle example](examples/gradle/build.gradle.kts)
+- [Minimal manifest example](examples/manifests/minimal.yml)
+- [Dependency manifest example](examples/manifests/dependencies-manual.yml)
+
+### Access and security
+
+- [User and repository ownership](docs/user-and-repository-ownership.md)
+- [Disconnecting](docs/disconnecting.md)
+- [Security model](docs/security-model.md)
+- [Operator escalation](docs/operator-escalation.md)
+
+## Need help?
+
+Start with [Troubleshooting](docs/troubleshooting.md). If the problem involves repository authorization, GitHub App installation mapping, manager access, trusted dependencies, or the Sentinel service itself, use the escalation path in [Operator escalation](docs/operator-escalation.md).
