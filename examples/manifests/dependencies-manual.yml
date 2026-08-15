@@ -1,0 +1,19 @@
+schema_version: 1
+plugin:
+  id: dependency-example
+  name: DependencyExample
+  main_class: com.example.DependencyExample
+artifact:
+  name: dependency-example
+  jar_path: target/DependencyExample.jar
+profiles:
+  - dependencies
+configs: []
+databases: []
+dependencies:
+  - id: worldguard
+    kind: hard
+actions: []
+
+# Repository policy must separately allow the manual-only dependencies profile.
+# Exact dependency source/version/run/artifact/checksum data stays in Sentinel's trusted registry.
