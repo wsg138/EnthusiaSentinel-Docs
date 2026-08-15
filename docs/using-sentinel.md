@@ -34,14 +34,14 @@ No alternate spelling, extra prose, multiline form, prefix, suffix, or unapprove
 
 Typical states:
 
-- `queued`: admitted but waiting for the one-heavy lane or a resource gate;
+- `queued`: accepted into the Sentinel queue but waiting for shared heavy-validation capacity or trusted host resource admission;
 - `running`: actively executing;
 - `passed`: the profile reached its required terminal success;
 - `failed`: a validation/runtime/security condition failed;
 - `cancelled`: an eligible job received a scoped cancellation;
 - `superseded`: a safe queued automatic job was replaced by newer exact-head work.
 
-A queue position or resource deferral does not mean the plugin failed.
+Heavy Sentinel profiles share host validation capacity with other trusted platform validation. If that capacity is already in use, Sentinel leaves the job queued rather than starting a competing heavy process or consuming an execution attempt. Trusted host resource admission happens only after that shared capacity is owned. A queue position, heavy-capacity wait, or resource deferral is infrastructure scheduling and does not by itself mean the plugin failed.
 
 ## Exact-SHA behavior
 
