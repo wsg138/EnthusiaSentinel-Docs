@@ -9,7 +9,7 @@ on:
       - '.github/workflows/wiki-preservation-bridge.yml'
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   snapshot:
@@ -19,6 +19,8 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Capture public Miraheze wiki read-only
         shell: bash
@@ -40,10 +42,30 @@ jobs:
           test "$history_count" -eq "$page_count"
 
       - name: Upload immutable preservation artifact
-        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: enthusia-wiki-pre-ai-baseline-${{ github.run_id }}
           path: wiki-preservation-output/
-          if-no-files-found: warn
+          if-no-files-found: error
           retention-days: 90
+
+      - name: Persist immutable baseline branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          work="$(mktemp -d)"
+          cp -a wiki-preservation-output/. "$work/"
+
+          git config user.name 'Enthusia Wiki Preservation'
+          git config user.email 'wiki-preservation@users.noreply.github.com'
+          git switch --orphan wiki-preservation-baseline
+          git rm -rf . >/dev/null 2>&1 || true
+          cp -a "$work/." .
+          git add .
+          git commit -m 'Preserve pre-redesign Enthusia Miraheze baseline'
+
+          if git ls-remote --exit-code --heads origin wiki-preservation-baseline >/dev/null 2>&1; then
+            echo 'wiki-preservation-baseline already exists; refusing to replace immutable baseline.' >&2
+            exit 1
+          fi
+          git push origin HEAD:wiki-preservation-baseline
