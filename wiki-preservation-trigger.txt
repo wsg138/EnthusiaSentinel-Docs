@@ -1,0 +1,2 @@
+Read-only Enthusia Miraheze preservation run.
+No Miraheze edit operations are permitted.
