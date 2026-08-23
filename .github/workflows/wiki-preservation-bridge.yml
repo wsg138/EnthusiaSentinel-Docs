@@ -1,0 +1,49 @@
+name: Enthusia Wiki Preservation Bridge
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'wiki-preservation-trigger.txt'
+      - 'scripts/wiki-preservation/**'
+      - '.github/workflows/wiki-preservation-bridge.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Capture public Miraheze wiki read-only
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf wiki-preservation-output
+          python3 scripts/wiki-preservation/snapshot_enthusia_wiki.py
+
+      - name: Verify preservation output
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s wiki-preservation-output/manifest.json
+          test -s wiki-preservation-output/review.json
+          page_count="$(find wiki-preservation-output/pages -type f -name '*.wiki' | wc -l | tr -d ' ')"
+          history_count="$(find wiki-preservation-output/history -type f -name '*.json' | wc -l | tr -d ' ')"
+          echo "page_count=$page_count history_count=$history_count"
+          test "$page_count" -gt 0
+          test "$history_count" -eq "$page_count"
+
+      - name: Upload immutable preservation artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: enthusia-wiki-pre-ai-baseline-${{ github.run_id }}
+          path: wiki-preservation-output/
+          if-no-files-found: warn
+          retention-days: 90
