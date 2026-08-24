@@ -19,6 +19,15 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Fetch immutable preservation baseline
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin wiki-preservation-baseline:refs/remotes/origin/wiki-preservation-baseline
+          git show origin/wiki-preservation-baseline:manifest.json >/dev/null
 
       - name: Capture public Miraheze wiki read-only
         shell: bash
@@ -39,11 +48,17 @@ jobs:
           test "$page_count" -gt 0
           test "$history_count" -eq "$page_count"
 
-      - name: Upload immutable preservation artifact
+      - name: Compare live wiki with preserved baseline
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/wiki-preservation/compare_with_baseline.py | tee wiki-preservation-output/comparison.txt
+
+      - name: Upload fresh snapshot and comparison
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: enthusia-wiki-pre-ai-baseline-${{ github.run_id }}
+          name: enthusia-wiki-live-check-${{ github.run_id }}
           path: wiki-preservation-output/
           if-no-files-found: warn
-          retention-days: 90
+          retention-days: 30
