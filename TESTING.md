@@ -18,7 +18,10 @@ Every `examples/manifests/*.yml` file is parsed with `yaml.safe_load` and checke
 - a qualified main class;
 - repository-relative `.jar` paths that cannot escape with `..`;
 - at least one nonblank, unique profile;
-- nonblank and unique dependency ids with explicit dependency kinds.
+- nonblank and unique dependency ids with explicit dependency kinds;
+- plugin examples containing only public identity fields (`id`, `name`, `main_class`);
+- artifact examples containing only local build-output fields (`name`, `jar_path`);
+- dependency requests containing only stable `id`/`kind` fields, so examples cannot teach repositories to choose private provenance, versions, commits, workflow runs, artifact ids, URLs, checksums, or trusted closure.
 
 The tests intentionally validate the documented example contract without inventing private registry values or production dependency provenance.
 
@@ -38,14 +41,17 @@ The Gradle Kotlin DSL example must retain:
 
 These are documentation contract checks. They do not download Gradle/Maven dependencies or compile a sample plugin.
 
-### Markdown links
+### Markdown links and anchors
 
 All Markdown files are scanned for repository-local links. Relative links must:
 
 - remain inside this repository;
-- point to a file/directory that exists.
+- point to a file/directory that exists;
+- when a fragment is present, point to a heading that exists in the target Markdown document (including duplicate-heading suffixes).
 
-HTTP(S), mail, data, root-relative site routes, and same-page anchor-only links are intentionally not fetched by CI.
+HTTP(S), mail, data, and root-relative site routes are intentionally not fetched by CI. Same-page anchors are checked against the current document.
+
+The heading-slug implementation intentionally covers the repository's normal GitHub Markdown heading style. If future documentation uses unusual embedded HTML or punctuation that GitHub anchors differently, update the validator deliberately alongside the new style rather than disabling fragment checks globally.
 
 ## Running locally
 
@@ -70,6 +76,10 @@ A green result means the documentation/examples on that **exact Git commit** sat
 
 Check the example itself first. If Sentinel's public manifest contract intentionally changed, update the example, test contract, and the corresponding documentation together. Do not loosen the test simply to preserve an obsolete example.
 
+### Public provenance-field failure
+
+Public plugin manifests may name the plugin, local artifact path, requested profiles, and stable dependency ids/kinds. They must not select private trust/provenance controls such as source repositories, exact versions/commits, workflow runs, artifact ids, download URLs, checksums, or transitive closure. Those remain operator-reviewed Sentinel registry state. If that security boundary changes intentionally, reconcile Sentinel Sim/runtime policy first; do not merely add an allowed key here.
+
 ### Unsafe artifact path
 
 Public examples must not teach absolute paths or repository escapes for their build artifact. Correct the example unless the canonical Sentinel contract explicitly changed and was reviewed elsewhere first.
@@ -82,9 +92,9 @@ Treat this as an invalid onboarding example. Example manifests should be determi
 
 Reconcile the example with the current supported Java/build contract. If Java/tooling support changed intentionally, update both examples and all public instructions that reference them.
 
-### Broken local Markdown link
+### Broken local Markdown link or anchor
 
-Usually a document was renamed/moved without its references being updated. Fix the reference or restore the intended document. Do not replace a valid relative documentation link with an external URL merely to silence CI.
+Usually a document/heading was renamed or moved without its references being updated. Fix the reference or restore the intended document/heading. Do not replace a valid relative documentation link with an external URL merely to silence CI.
 
 ## What this repository does not prove
 
