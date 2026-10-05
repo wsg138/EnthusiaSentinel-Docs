@@ -22,7 +22,11 @@ REQUIRED_MANIFEST_KEYS = {
 }
 LIST_KEYS = {"profiles", "configs", "databases", "dependencies", "actions"}
 MARKDOWN_LINK = re.compile(r"!?\[[^\]]*\]\(([^)]+)\)")
+MARKDOWN_HEADING = re.compile(r"^#{1,6}\s+(.+?)\s*#*\s*$")
 PLUGIN_ID = re.compile(r"^[a-z0-9][a-z0-9._-]*$")
+ALLOWED_PLUGIN_KEYS = {"id", "name", "main_class"}
+ALLOWED_ARTIFACT_KEYS = {"name", "jar_path"}
+ALLOWED_DEPENDENCY_KEYS = {"id", "kind"}
 
 
 class ManifestExampleTests(unittest.TestCase):
@@ -56,6 +60,27 @@ class ManifestExampleTests(unittest.TestCase):
                 self.assertFalse(jar_path.is_absolute(), f"{path} artifact path must be repository-relative")
                 self.assertNotIn("..", jar_path.parts, f"{path} artifact path must not escape the repository")
                 self.assertEqual(".jar", jar_path.suffix.lower(), f"{path} artifact must point to a JAR")
+
+    def test_public_examples_cannot_embed_private_provenance_controls(self) -> None:
+        for path in sorted(MANIFESTS.glob("*.yml")):
+            data = yaml.safe_load(path.read_text(encoding="utf-8"))
+            with self.subTest(path=path.name):
+                self.assertEqual(
+                    ALLOWED_PLUGIN_KEYS,
+                    set(data["plugin"]),
+                    f"{path}: plugin repositories may describe identity, not private trust/provenance controls",
+                )
+                self.assertEqual(
+                    ALLOWED_ARTIFACT_KEYS,
+                    set(data["artifact"]),
+                    f"{path}: artifact examples may describe local build output only",
+                )
+                for dependency in data["dependencies"]:
+                    self.assertEqual(
+                        ALLOWED_DEPENDENCY_KEYS,
+                        set(dependency),
+                        f"{path}: dependency examples may request stable id/kind only; provenance stays operator-owned",
+                    )
 
     def test_profiles_and_dependencies_have_explicit_nonblank_identifiers(self) -> None:
         for path in sorted(MANIFESTS.glob("*.yml")):
@@ -107,17 +132,18 @@ class MarkdownLinkTests(unittest.TestCase):
             text = markdown.read_text(encoding="utf-8")
             for match in MARKDOWN_LINK.finditer(text):
                 raw_target = match.group(1).strip().strip("<>")
-                if not raw_target or raw_target.startswith("#"):
+                if not raw_target:
                     continue
                 lowered = raw_target.lower()
                 if lowered.startswith(("http://", "https://", "mailto:", "data:")):
                     continue
 
-                path_part = unquote(raw_target.split("#", 1)[0].split("?", 1)[0])
-                if not path_part or path_part.startswith("/"):
+                path_part, separator, fragment = raw_target.partition("#")
+                path_part = unquote(path_part.split("?", 1)[0])
+                if path_part.startswith("/"):
                     continue
 
-                candidate = (markdown.parent / path_part).resolve()
+                candidate = markdown if not path_part else (markdown.parent / path_part).resolve()
                 try:
                     candidate.relative_to(ROOT)
                 except ValueError:
@@ -125,8 +151,42 @@ class MarkdownLinkTests(unittest.TestCase):
                     continue
                 if not candidate.exists():
                     failures.append(f"{markdown.relative_to(ROOT)} -> {raw_target} does not exist")
+                    continue
+
+                if separator and fragment and candidate.is_file() and candidate.suffix.lower() == ".md":
+                    anchors = markdown_anchors(candidate)
+                    decoded_fragment = unquote(fragment).lower()
+                    if decoded_fragment not in anchors:
+                        failures.append(
+                            f"{markdown.relative_to(ROOT)} -> {raw_target} points to missing Markdown heading"
+                        )
 
         self.assertEqual([], failures, "broken repository-local Markdown links:\n" + "\n".join(failures))
+
+
+def markdown_anchors(path: Path) -> set[str]:
+    anchors: set[str] = set()
+    duplicate_counts: dict[str, int] = {}
+    for line in path.read_text(encoding="utf-8").splitlines():
+        match = MARKDOWN_HEADING.match(line)
+        if not match:
+            continue
+        base = github_heading_slug(match.group(1))
+        if not base:
+            continue
+        duplicate_index = duplicate_counts.get(base, 0)
+        duplicate_counts[base] = duplicate_index + 1
+        anchors.add(base if duplicate_index == 0 else f"{base}-{duplicate_index}")
+    return anchors
+
+
+def github_heading_slug(heading: str) -> str:
+    heading = re.sub(r"<[^>]+>", "", heading)
+    heading = re.sub(r"[`*_~]", "", heading)
+    heading = heading.strip().lower()
+    heading = re.sub(r"[^\w\- ]", "", heading, flags=re.UNICODE)
+    heading = re.sub(r"\s+", "-", heading)
+    return heading
 
 
 if __name__ == "__main__":
